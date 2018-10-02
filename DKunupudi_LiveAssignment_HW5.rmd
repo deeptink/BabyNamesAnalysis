@@ -1,0 +1,209 @@
+---
+title: "Baby Name Analysis 2015 vs 2016"
+---
+
+
+####OBJECTIVE
+
+
+In this study, we will try and explore the basic information about the datasets provided. The datasets are extracted,cleansed,analyzed and merged to provide the combined overview of the most female popular names. The output is generated and send to client.
+
+Each dataset contains close to 33000 names along with gender and total number of children for a given name.
+
+
+
+####R LIBRARIES
+
+Following R libraries are imported for analysis.
+
+
+```{r}
+library(dplyr)
+library(sqldf)
+library(data.table)
+```
+ 
+ 
+####ANALYSIS
+ 
+ 
+As an inital step, reading all the files as dataframe objects and then look at first few rows to get data highlights.
+
+```{r}
+Names2016="C:\\Users\\dkunupudi\\Downloads\\LiveSessionAssignment5_2\\yob2016.txt"
+Names2015="C:\\Users\\dkunupudi\\Downloads\\LiveSessionAssignment5_2\\yob2015.txt"
+df <- read.table(Names2016, sep = ';',header = FALSE)
+df2015 <- read.table(Names2015, sep = ',',header = FALSE)
+```
+
+```{r}
+# 2016 Data Overview
+head(df, n=3)
+```
+
+```{r}
+# 2015 Data Overview
+head(df2015, n=3)
+```
+
+Column names V1,V2,V3 needs to be renamed to meaningful names for both data frames.
+
+```{r}
+df <- df %>% rename(FirstName = V1, Gender = V2, NoOfChildren = V3)
+df2015 <- df2015 %>% rename(FirstName = V1, Gender = V2, NoOfChildren = V3)
+```
+
+```{r}
+# Summary for 2016
+summary(df)
+```
+
+```{r}
+# Names of data frame 2016 data
+names(df)
+dim(df)
+```
+
+```{r}
+# Structure of data frame 2016 data
+str(df)
+```
+
+Identify the data anomaly for 'yyy' in 2016 data.
+
+```{r}
+sqldf("select * from df where firstname like '%yyy'")
+```
+
+Data anomaly for the row above with yyy will be removed from 2016 data and place it new datafrmae y2016.
+
+```{r}
+Valuerow<-grep('yyy', df$FirstName)
+y2016 <- df[-1 * Valuerow,] 
+```
+
+Verify the result that the value is removed from the dataframe.
+
+```{r}
+sqldf("select * from y2016 where firstname like '%yyy'")
+```
+
+Now, for 2015 data set, lets rename it to y2015.
+
+```{r}
+y2015 <- df2015
+```
+
+Analyzing the last 10 rows in data frame y2015.
+
+```{r}
+tail(y2015,n=10)
+```
+
+Interstingly, the last 10 have name starting from Z and all are male with total number of children in the group as 5.
+
+Let's merge the data of 2016 and 2015 to summarize the multiyear information.
+
+```{r}
+dt1 <- data.table(y2015, key = "FirstName")
+dt2 <- data.table(y2016, key = "FirstName") 
+merge_1516<- merge(dt1,dt2)
+head(merge_1516,n=4)
+summary(merge_1516)
+str(merge_1516)
+class(merge_1516)
+```
+
+Veirfy the merged data, to check for any NA in any of the columns.
+
+```{r}
+sapply(merge_1516, function(x) sum(is.na(x)))
+```
+
+Further verify each and every column in merged data.
+
+```{r}
+sum(is.na(merge_1516[1]))
+sum(is.na(merge_1516[2]))
+sum(is.na(merge_1516[3]))
+sum(is.na(merge_1516[4]))
+sum(is.na(merge_1516[5]))
+```
+
+Rename the merged data to "final"
+
+```{r}
+final <- merge_1516
+```
+
+Adding a new column Total to combine the number of children in 2015 and 2016.
+
+```{r}
+final$Total <- final$NoOfChildren.x+final$NoOfChildren.y
+head(final,n=4)
+```
+
+For combined years, the total number of popular names are below - 
+
+```{r}
+TotalPopularNames <- sum(final$Total)
+TotalPopularNames
+```
+
+Sort the data by new column Total.
+
+```{r}
+final <- final[order(final$Total),]
+head(final,n=5)
+```
+
+
+Here are the top 10 most popular names among male and female.
+
+```{r}
+final <- final[order(final$Total, decreasing=TRUE),]
+head(final,n=10)
+```
+
+Since client is expecting only a girl, here are the top 10 most popular female names.
+```{r}
+FemaleList <-final[(final$Gender.x == "F"), ]
+FemaleList <- FemaleList[order(FemaleList$Total, decreasing=TRUE),]
+# TOP 10 POPULAR GIRLS NAME
+head(FemaleList,n=10)
+```
+
+Export the file to Top10Female.csv file for client.
+```{r}
+FemaleList$Gender.x <- NULL
+FemaleList$Gender.y <- NULL
+FemaleList$NoOfChildren.x <- NULL
+FemaleList$NoOfChildren.y <- NULL
+head(FemaleList,n=10)
+ListF<- head(FemaleList,n=10)
+write.csv(ListF, file = "C:\\Users\\dkunupudi\\Downloads\\LiveSessionAssignment5_2\\Top10Female.csv",row.names=FALSE, na="",col.names=FALSE, sep=",")
+```
+
+** The file is attached to the assignment along with the codebook.
+
+####GITHUB REFERENCE
+
+All the files along with codebook is available in GiHub:
+https://github.com/deeptink/BabyNamesAnalysis
+
+List of files:
+1. Top10Female.csv
+2. DKunupudi_LiveAssignment_HW5.html
+3. DKunupudi_LiveAssignment_HW5.Rmd
+4. DKunupudi_Week5_Assignment_Codebook.txt
+
+
+
+
+
+
+
+
+
+
+
